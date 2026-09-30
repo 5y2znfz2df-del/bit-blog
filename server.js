@@ -196,9 +196,10 @@ const server = http.createServer((req, res) => {
 
   // ---- 文章 ----
   if (req.method === 'GET' && pathname === '/api/posts') {
-    // 游客/普通用户看知识区(public)，管理员看全部
-    if (session && session.is_admin) {
-      const rows = db.prepare('SELECT * FROM posts ORDER BY date DESC').all();
+    // zone=private 仅管理员可取私密区；默认知识区（public）所有人可见
+    if (url.searchParams.get('zone') === 'private') {
+      if (!session || !session.is_admin) return sendJson(res, 403, { error: '私密区仅管理员可访问' });
+      const rows = db.prepare('SELECT * FROM posts WHERE zone = ? ORDER BY date DESC').all('private');
       return sendJson(res, 200, rows.map(r => ({ ...publicPost(r), likes: getLikes(r.id), comment_count: getComments(r.id).length })));
     }
     const rows = db.prepare('SELECT * FROM posts WHERE zone = ? ORDER BY date DESC').all('public');

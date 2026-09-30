@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>比特的小博客</title>
+  <title>私密区 - 比特的小博客</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,8 +11,8 @@
     <nav class="nav">
       <a class="logo" href="/">比特的小博客</a>
       <div class="nav-links">
-        <a href="/" class="active">主页</a>
-        <a href="#" id="nav-private" class="hidden">私密区</a>
+        <a href="/">主页</a>
+        <a href="private.html" class="active">私密区</a>
         <a href="#" id="nav-publish" class="hidden">发布</a>
         <a href="#" id="nav-profile" class="hidden">我的主页</a>
         <a href="/login.html" id="nav-login">登录</a>
@@ -22,18 +22,13 @@
   </header>
 
   <main class="container">
-    <div class="search-bar">
-      <input type="text" id="search-input" placeholder="搜索文章标题或摘要…" autocomplete="off">
-    </div>
-    <h1 class="page-title">最新文章</h1>
+    <h1 class="page-title">🔒 私密区 <span class="private-hint">仅管理员可见</span></h1>
     <ul id="post-list" class="post-list"></ul>
     <p id="status-msg" class="status-msg"></p>
   </main>
 
-  <footer class="site-footer">
-    Powered by 多AI协作 🤖
-  </footer>
+  <footer class="site-footer">Powered by 多AI协作 🤖</footer>
 
-  <script src="app.js"></script>
+  <script src="private.js"></script>
 </body>
 </html>

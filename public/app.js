@@ -10,6 +10,7 @@
   var navLogout = document.getElementById('nav-logout');
   var navPublish = document.getElementById('nav-publish');
   var navProfile = document.getElementById('nav-profile');
+  var navPrivate = document.getElementById('nav-private');
   var aboutLink = document.getElementById('about-link');
 
   var allPosts = [];
@@ -23,6 +24,7 @@
     navLogout.classList.toggle('hidden', !loggedIn);
     navProfile.classList.toggle('hidden', !loggedIn);
     navPublish.classList.toggle('hidden', !(me && me.is_admin));
+    if (navPrivate) navPrivate.classList.toggle('hidden', !(me && me.is_admin));
   }
 
   fetch('/api/me').then(function (r) { return r.json(); })
@@ -40,6 +42,10 @@
   if (navProfile) navProfile.addEventListener('click', function (e) {
     e.preventDefault();
     window.location.href = '/profile.html';
+  });
+  if (navPrivate) navPrivate.addEventListener('click', function (e) {
+    e.preventDefault();
+    window.location.href = '/private.html';
   });
 
   // ---- 渲染列表 ----
