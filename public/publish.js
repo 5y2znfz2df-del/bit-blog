@@ -9,11 +9,16 @@
   var msg = document.getElementById('pub-msg');
   var submit = document.getElementById('pub-submit');
 
-  // 先确认登录且是管理员，否则打回
+  // 先确认登录，否则打回；私密区选项仅管理员可见
   fetch('/api/me').then(function (r) { return r.json(); })
     .then(function (d) {
       if (!d.user) { msg.textContent = '请先登录'; window.location.href = '/login.html'; return; }
-      if (!d.user.is_admin) { msg.textContent = '只有管理员能发布文章'; window.location.href = '/'; return; }
+      if (!d.user.is_admin) {
+        // 普通用户：隐藏私密区选项，默认知识区
+        var zoneWrap = document.getElementById('pub-zone-wrap');
+        if (zoneWrap) zoneWrap.classList.add('hidden');
+        zone.value = 'public';
+      }
     })
     .catch(function () {});
 

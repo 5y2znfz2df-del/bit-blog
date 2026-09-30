@@ -23,8 +23,8 @@
     navLogin.classList.toggle('hidden', loggedIn);
     navLogout.classList.toggle('hidden', !loggedIn);
     navProfile.classList.toggle('hidden', !loggedIn);
-    navPublish.classList.toggle('hidden', !(me && me.is_admin));
-    if (navPrivate) navPrivate.classList.toggle('hidden', !(me && me.is_admin));
+    navPublish.classList.toggle('hidden', !loggedIn); // 登录用户都能发布
+    if (navPrivate) navPrivate.classList.remove('hidden'); // 私密区所有人可看
   }
 
   fetch('/api/me').then(function (r) { return r.json(); })

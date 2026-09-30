@@ -48,16 +48,16 @@
     });
   }
 
-  // 管理员校验 + 加载私密文章
+  // 加载私密文章（所有访客均可看私密区；发布权限由后端控制）
   fetch('/api/me').then(function (r) { return r.json(); })
     .then(function (d) {
       var user = d.user;
-      if (!user) { statusMsg.textContent = '请先登录'; window.location.href = '/login.html'; return; }
-      if (!user.is_admin) { statusMsg.textContent = '私密区仅管理员可访问'; window.location.href = '/'; return; }
-      navLogin.classList.add('hidden');
-      navLogout.classList.remove('hidden');
-      navProfile.classList.remove('hidden');
-      navPublish.classList.remove('hidden');
+      if (user) {
+        navLogin.classList.add('hidden');
+        navLogout.classList.remove('hidden');
+        navProfile.classList.remove('hidden');
+        navPublish.classList.remove('hidden');
+      }
       return fetch('/api/posts?zone=private');
     })
     .then(function (res) { return res ? res.json() : null; })

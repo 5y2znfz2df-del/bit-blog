@@ -196,13 +196,9 @@ const server = http.createServer((req, res) => {
 
   // ---- 文章 ----
   if (req.method === 'GET' && pathname === '/api/posts') {
-    // zone=private 仅管理员可取私密区；默认知识区（public）所有人可见
-    if (url.searchParams.get('zone') === 'private') {
-      if (!session || !session.is_admin) return sendJson(res, 403, { error: '私密区仅管理员可访问' });
-      const rows = db.prepare('SELECT * FROM posts WHERE zone = ? ORDER BY date DESC').all('private');
-      return sendJson(res, 200, rows.map(r => ({ ...publicPost(r), likes: getLikes(r.id), comment_count: getComments(r.id).length })));
-    }
-    const rows = db.prepare('SELECT * FROM posts WHERE zone = ? ORDER BY date DESC').all('public');
+    // zone=private 私密区；默认知识区（public）。两个区所有人都可读。
+    const zone = url.searchParams.get('zone') === 'private' ? 'private' : 'public';
+    const rows = db.prepare('SELECT * FROM posts WHERE zone = ? ORDER BY date DESC').all(zone);
     return sendJson(res, 200, rows.map(r => ({ ...publicPost(r), likes: getLikes(r.id), comment_count: getComments(r.id).length })));
   }
 
@@ -210,19 +206,17 @@ const server = http.createServer((req, res) => {
     const slug = pathname.slice('/api/posts/'.length);
     const row = db.prepare('SELECT * FROM posts WHERE slug = ?').get(slug);
     if (!row) return sendJson(res, 404, { error: 'not found' });
-    if (row.zone === 'private' && !(session && session.is_admin)) {
-      return sendJson(res, 403, { error: '私密文章，仅管理员可见' });
-    }
     return sendJson(res, 200, { ...publicPost(row), likes: getLikes(row.id), comments: getComments(row.id) });
   }
 
   if (req.method === 'POST' && pathname === '/api/posts') {
     if (!session) return sendJson(res, 401, { error: '请先登录' });
-    if (!session.is_admin) return sendJson(res, 403, { error: '只有管理员能发布文章' });
     return readBody(req, (body) => {
       const title = String(body.title || '').trim();
       const content = String(body.content || '').trim();
       const zone = body.zone === 'private' ? 'private' : 'public';
+      // 私密区仅管理员可发布；知识区登录用户均可发布
+      if (zone === 'private' && !session.is_admin) return sendJson(res, 403, { error: '只有管理员能在私密区发布' });
       if (!title || !content) return sendJson(res, 400, { error: '标题和内容不能为空' });
       const slug = body.slug || title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '') + '-' + Date.now().toString(36);
       const excerpt = String(body.excerpt || '').trim() || content.slice(0, 60);

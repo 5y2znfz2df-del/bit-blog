@@ -28,10 +28,12 @@
         <label>内容</label>
         <textarea id="pub-content" rows="12" required></textarea>
         <label>归属区域</label>
-        <select id="pub-zone">
-          <option value="public">知识区（所有人可见）</option>
-          <option value="private">私密区（仅管理员可见）</option>
-        </select>
+        <div id="pub-zone-wrap">
+          <select id="pub-zone">
+            <option value="public">知识区（所有人可见）</option>
+            <option value="private">私密区（仅管理员可发布）</option>
+          </select>
+        </div>
         <button type="submit" id="pub-submit">发布</button>
       </form>
     </div>
