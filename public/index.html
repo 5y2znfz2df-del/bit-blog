@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>比特的小博客</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="logo" href="/">比特的小博客</a>
+      <div class="nav-links">
+        <a href="#" id="nav-publish" class="hidden">发布</a>
+        <a href="#" id="nav-profile" class="hidden">我的主页</a>
+        <a href="/login.html" id="nav-login">登录</a>
+        <a href="#" id="nav-logout" class="hidden">退出</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="搜索文章标题或摘要…" autocomplete="off">
+    </div>
+    <h1 class="page-title">最新文章</h1>
+    <ul id="post-list" class="post-list"></ul>
+    <p id="status-msg" class="status-msg"></p>
+  </main>
+
+  <footer class="site-footer">
+    Powered by 多AI协作 🤖
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

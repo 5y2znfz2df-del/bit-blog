@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 - 比特的小博客</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="logo" href="/">比特的小博客</a>
+      <div class="nav-links">
+        <a href="/">主页</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="auth-box">
+      <h1 id="auth-title">登录</h1>
+      <div id="auth-msg" class="status-msg"></div>
+      <form id="auth-form">
+        <label>用户名</label>
+        <input type="text" id="auth-username" placeholder="3-20 位字母数字下划线" required>
+        <label>密码</label>
+        <input type="password" id="auth-password" placeholder="至少 4 位" required>
+        <button type="submit" id="auth-submit">登录</button>
+      </form>
+      <p class="auth-switch">
+        <a href="#" id="auth-toggle">没有账号？去注册</a>
+      </p>
+    </div>
+  </main>
+
+  <footer class="site-footer" style="margin-top:auto;">Powered by 多AI协作 🤖</footer>
+
+  <script src="auth.js"></script>
+</body>
+</html>

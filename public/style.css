@@ -1,0 +1,308 @@
+/* 比特的小博客 - 多AI协作生成 */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: #f6f7f9;
+  color: #222;
+  line-height: 1.7;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 顶部导航 */
+.site-header {
+  background: #1f2430;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.nav {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.logo {
+  color: #fff;
+  text-decoration: none;
+  font-size: 20px;
+  font-weight: 700;
+}
+.nav-links a {
+  color: #c9d1e0;
+  text-decoration: none;
+  margin-left: 18px;
+  font-size: 15px;
+  transition: color .2s;
+}
+.nav-links a:hover { color: #fff; }
+
+/* 主区域 */
+.container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 36px 20px;
+  flex: 1;
+  width: 100%;
+}
+.page-title {
+  font-size: 26px;
+  margin-bottom: 22px;
+  color: #1f2430;
+}
+
+/* 文章卡片列表 */
+.post-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.post-list li {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  padding: 20px 22px;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+}
+.post-list li:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,.1);
+}
+.post-list h2 {
+  font-size: 19px;
+  margin-bottom: 6px;
+  color: #1f2430;
+}
+.post-list .post-date {
+  font-size: 13px;
+  color: #9aa0ab;
+  margin-bottom: 8px;
+}
+.post-list p {
+  font-size: 15px;
+  color: #555;
+}
+
+/* 状态提示 */
+.status-msg {
+  margin-top: 18px;
+  color: #9aa0ab;
+  font-size: 14px;
+}
+
+/* 页脚 */
+.site-footer {
+  text-align: center;
+  padding: 20px;
+  color: #9aa0ab;
+  font-size: 13px;
+  background: #fff;
+  border-top: 1px solid #ececec;
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+  .nav { padding: 12px 16px; }
+  .container { padding: 24px 16px; }
+  .post-list li { padding: 16px 18px; }
+  .post-list h2 { font-size: 17px; }
+}
+/* ---- 搜索框 ---- */
+.search-bar {
+  margin-bottom: 24px;
+}
+.search-bar input {
+  width: 100%;
+  max-width: 480px;
+  padding: 12px 18px;
+  font-size: 15px;
+  border: 2px solid #e2e5ea;
+  border-radius: 20px;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+  background: #fff;
+  color: #222;
+}
+.search-bar input:focus {
+  border-color: #4a6cf7;
+  box-shadow: 0 0 0 3px rgba(74,108,247,.12);
+}
+
+/* ---- 文章详情页 ---- */
+.post-detail {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  padding: 28px 30px;
+}
+.post-title {
+  font-size: 26px;
+  color: #1f2430;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.post-detail .post-date {
+  font-size: 13px;
+  color: #9aa0ab;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
+}
+.post-content p {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 16px;
+  text-align: justify;
+}
+@media (max-width: 600px) {
+  .post-detail { padding: 20px 18px; }
+  .post-title { font-size: 21px; }
+}
+
+/* ---- 通用隐藏 ---- */
+.hidden { display: none !important; }
+
+/* ---- 管理员标签 ---- */
+.admin-badge {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #f6a623, #f76b1c);
+  border-radius: 10px;
+  vertical-align: middle;
+}
+.post-head h2 { display: inline-block; margin-bottom: 0; }
+
+/* ---- 文章卡片头部 ---- */
+.post-head { display: flex; align-items: center; flex-wrap: wrap; }
+.post-head .admin-badge { margin-left: 10px; }
+
+/* ---- 文章 meta（点赞/评论数）---- */
+.post-meta {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #9aa0ab;
+}
+.post-meta .liked { color: #f76b1c; }
+
+/* ---- 登录/注册框 ---- */
+.auth-box {
+  max-width: 420px;
+  margin: 40px auto;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 14px rgba(0,0,0,.08);
+  padding: 32px 34px;
+}
+.auth-box h1 { font-size: 22px; margin-bottom: 18px; color: #1f2430; }
+.auth-box form label {
+  display: block; font-size: 13px; color: #666; margin: 14px 0 6px;
+  font-weight: 600;
+}
+.auth-box form input {
+  width: 100%; padding: 11px 14px; font-size: 15px;
+  border: 2px solid #e2e5ea; border-radius: 10px; outline: none;
+  transition: border-color .2s;
+}
+.auth-box form input:focus { border-color: #4a6cf7; }
+.auth-box form button {
+  width: 100%; margin-top: 22px; padding: 12px; font-size: 16px; font-weight: 700;
+  color: #fff; background: #4a6cf7; border: none; border-radius: 10px; cursor: pointer;
+  transition: background .2s;
+}
+.auth-box form button:hover { background: #3a5bd9; }
+.auth-switch { margin-top: 16px; text-align: center; font-size: 14px; }
+.auth-switch a { color: #4a6cf7; text-decoration: none; }
+
+/* ---- 发布页 ---- */
+.publish-box {
+  max-width: 720px; margin: 0 auto; background: #fff;
+  border-radius: 14px; box-shadow: 0 2px 14px rgba(0,0,0,.08);
+  padding: 30px 34px;
+}
+.publish-box form label {
+  display: block; font-size: 13px; color: #666; margin: 16px 0 6px; font-weight: 600;
+}
+.publish-box form input, .publish-box form textarea, .publish-box form select {
+  width: 100%; padding: 11px 14px; font-size: 15px;
+  border: 2px solid #e2e5ea; border-radius: 10px; outline: none; font-family: inherit;
+}
+.publish-box form input:focus, .publish-box form textarea:focus, .publish-box form select:focus { border-color: #4a6cf7; }
+.publish-box form textarea { resize: vertical; }
+.publish-box form button {
+  margin-top: 22px; padding: 12px 34px; font-size: 16px; font-weight: 700;
+  color: #fff; background: #4a6cf7; border: none; border-radius: 10px; cursor: pointer;
+}
+.publish-box form button:hover { background: #3a5bd9; }
+
+/* ---- 点赞栏 ---- */
+.like-bar { text-align: center; margin: 24px 0; }
+#like-btn {
+  padding: 10px 26px; font-size: 15px; font-weight: 600;
+  color: #f76b1c; background: #fff; border: 2px solid #f76b1c; border-radius: 20px;
+  cursor: pointer; transition: all .2s;
+}
+#like-btn:hover { background: #fff4ec; }
+
+/* ---- 评论区 ---- */
+.comments-section {
+  background: #fff; border-radius: 14px; box-shadow: 0 2px 14px rgba(0,0,0,.06);
+  padding: 26px 30px; margin-top: 24px;
+}
+.comments-section h2 { font-size: 18px; margin-bottom: 18px; color: #1f2430; }
+#comment-form-box textarea {
+  width: 100%; padding: 12px 14px; font-size: 15px;
+  border: 2px solid #e2e5ea; border-radius: 10px; outline: none; resize: vertical;
+  font-family: inherit; box-sizing: border-box;
+}
+#comment-form-box textarea:focus { border-color: #4a6cf7; }
+#comment-submit {
+  margin-top: 10px; padding: 9px 24px; font-size: 14px; font-weight: 600;
+  color: #fff; background: #4a6cf7; border: none; border-radius: 8px; cursor: pointer;
+}
+.comment-list { list-style: none; margin-top: 20px; }
+.comment-item {
+  padding: 14px 0; border-top: 1px solid #f0f0f0;
+}
+.comment-meta { font-size: 13px; color: #9aa0ab; margin-bottom: 4px; }
+.comment-text { font-size: 15px; color: #333; }
+.comment-empty { color: #9aa0ab; font-size: 14px; padding: 12px 0; }
+
+/* ---- 个人主页 ---- */
+.profile-box { max-width: 620px; margin: 0 auto; }
+.profile-card {
+  background: #fff; border-radius: 14px; box-shadow: 0 2px 14px rgba(0,0,0,.08);
+  padding: 30px 34px; text-align: center;
+}
+.profile-name { display: flex; align-items: center; justify-content: center; }
+.profile-username { font-size: 22px; font-weight: 700; color: #1f2430; }
+.profile-card .admin-badge { margin-left: 10px; }
+.profile-signature {
+  margin-top: 12px; color: #777; font-size: 15px;
+  font-style: italic;
+}
+.signature-edit {
+  background: #fff; border-radius: 14px; box-shadow: 0 2px 14px rgba(0,0,0,.06);
+  padding: 24px 30px; margin-top: 22px;
+}
+.signature-edit label { font-size: 13px; color: #666; font-weight: 600; }
+.signature-row { display: flex; gap: 10px; margin-top: 10px; }
+.signature-row input {
+  flex: 1; padding: 11px 14px; font-size: 15px;
+  border: 2px solid #e2e5ea; border-radius: 10px; outline: none;
+}
+.signature-row input:focus { border-color: #4a6cf7; }
+.signature-row button {
+  padding: 0 20px; font-weight: 600; color: #fff;
+  background: #4a6cf7; border: none; border-radius: 10px; cursor: pointer;
+}

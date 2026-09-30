@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的主页 - 比特的小博客</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="logo" href="/">比特的小博客</a>
+      <div class="nav-links">
+        <a href="/">主页</a>
+        <a href="#" id="nav-publish" class="hidden">发布</a>
+        <a href="/login.html" id="nav-login">登录</a>
+        <a href="#" id="nav-logout" class="hidden">退出</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="profile-box">
+      <h1 class="page-title">我的主页</h1>
+      <p id="profile-msg" class="status-msg"></p>
+
+      <div id="profile-body" class="hidden">
+        <div class="profile-card">
+          <div class="profile-name">
+            <span id="profile-username" class="profile-username"></span>
+            <span id="profile-admin-badge" class="admin-badge hidden">管理员</span>
+          </div>
+          <p id="profile-signature" class="profile-signature"></p>
+        </div>
+
+        <div class="signature-edit">
+          <label>个性签名（100 字以内）</label>
+          <div class="signature-row">
+            <input type="text" id="sig-input" maxlength="100" placeholder="写一句个性签名…">
+            <button id="sig-save">保存</button>
+          </div>
+          <p id="sig-msg" class="status-msg"></p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer" style="margin-top:auto;">Powered by 多AI协作 🤖</footer>
+
+  <script src="profile.js"></script>
+</body>
+</html>

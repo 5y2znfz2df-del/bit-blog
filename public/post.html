@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文章 - 比特的小博客</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="logo" href="/">比特的小博客</a>
+      <div class="nav-links">
+        <a href="/">主页</a>
+        <a href="#" id="nav-publish" class="hidden">发布</a>
+        <a href="#" id="nav-profile" class="hidden">我的主页</a>
+        <a href="/login.html" id="nav-login">登录</a>
+        <a href="#" id="nav-logout" class="hidden">退出</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <article id="post-detail" class="post-detail">
+      <p id="status-msg" class="status-msg">加载中…</p>
+    </article>
+
+    <!-- 点赞 -->
+    <div id="like-bar" class="like-bar hidden">
+      <button id="like-btn">❤ 点赞 (<span id="like-count">0</span>)</button>
+    </div>
+
+    <!-- 评论区 -->
+    <section id="comments-section" class="comments-section hidden">
+      <h2>评论 (<span id="comment-count">0</span>)</h2>
+      <div id="comment-form-box" class="hidden">
+        <textarea id="comment-input" rows="3" placeholder="写下你的评论…"></textarea>
+        <button id="comment-submit">发表评论</button>
+      </div>
+      <p id="comment-login-hint" class="status-msg hidden">请 <a href="/login.html">登录</a> 后评论</p>
+      <ul id="comment-list" class="comment-list"></ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">Powered by 多AI协作 🤖</footer>
+
+  <script src="post.js"></script>
+</body>
+</html>

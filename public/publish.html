@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>发布文章 - 比特的小博客</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="logo" href="/">比特的小博客</a>
+      <div class="nav-links">
+        <a href="/">主页</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="publish-box">
+      <h1 class="page-title">发布文章</h1>
+      <p id="pub-msg" class="status-msg"></p>
+      <form id="publish-form">
+        <label>标题</label>
+        <input type="text" id="pub-title" maxlength="80" required>
+        <label>摘要（可选，留空自动截取）</label>
+        <input type="text" id="pub-excerpt" maxlength="120">
+        <label>内容</label>
+        <textarea id="pub-content" rows="12" required></textarea>
+        <label>归属区域</label>
+        <select id="pub-zone">
+          <option value="public">知识区（所有人可见）</option>
+          <option value="private">私密区（仅管理员可见）</option>
+        </select>
+        <button type="submit" id="pub-submit">发布</button>
+      </form>
+    </div>
+  </main>
+
+  <footer class="site-footer" style="margin-top:auto;">Powered by 多AI协作 🤖</footer>
+
+  <script src="publish.js"></script>
+</body>
+</html>

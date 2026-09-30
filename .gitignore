@@ -1,0 +1,6 @@
+# 数据库与缓存不上传
+data/blog.db
+data/blog.db-*
+*.log
+node_modules/
+.DS_Store
