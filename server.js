@@ -158,16 +158,45 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === 'POST' && pathname === '/api/login') {
-    return readBody(req, (body) => {
+    return readBody(req, async (body) => {
       const username = String(body.username || '').trim();
       const password = String(body.password || '');
-      const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-      if (!user || user.password_hash !== hashPassword(password, user.salt)) {
-        return sendJson(res, 401, { error: '用户名或密码错误' });
+      let user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+      // 本地账号密码验证
+      if (user && user.password_hash === hashPassword(password, user.salt)) {
+        const t = createSession(username);
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Set-Cookie': `session=${t}; Path=/; HttpOnly` });
+        return res.end(JSON.stringify({ ok: true, user: publicUser(user) }));
       }
-      const t = createSession(username);
-      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Set-Cookie': `session=${t}; Path=/; HttpOnly` });
-      res.end(JSON.stringify({ ok: true, user: publicUser(user) }));
+      // OJ 账号互通登录（像微信扫码那样：OJ 注册过的用户直接登博客）
+      // 本地查不到或密码不对时，转发给 OJ 验证；OJ 认账就在博客建号/同步并发会话
+      try {
+        const ojRes = await fetch('http://127.0.0.1:8080/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+          signal: AbortSignal.timeout(5000)
+        });
+        const ojData = await ojRes.json();
+        if (ojData.ok) {
+          const isAdmin = ojData.role === 'admin' ? 1 : 0;
+          if (!user) {
+            const salt = makeSalt();
+            db.prepare('INSERT INTO users (username, password_hash, salt, is_admin, signature) VALUES (?, ?, ?, ?, ?)')
+              .run(username, hashPassword(password, salt), salt, isAdmin, '来自 OJ 的 ' + username);
+          } else {
+            // 同步最新密码与角色（用户可能在 OJ 改过密码）
+            const salt = makeSalt();
+            db.prepare('UPDATE users SET password_hash = ?, salt = ?, is_admin = ? WHERE username = ?')
+              .run(hashPassword(password, salt), salt, isAdmin, username);
+          }
+          user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+          const t = createSession(username);
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Set-Cookie': `session=${t}; Path=/; HttpOnly` });
+          return res.end(JSON.stringify({ ok: true, user: publicUser(user), via_oj: true }));
+        }
+      } catch (e) { /* OJ 不可达则退回本地验证结果 */ }
+      return sendJson(res, 401, { error: '用户名或密码错误' });
     });
   }
 
