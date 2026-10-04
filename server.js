@@ -105,6 +105,10 @@ CREATE TABLE IF NOT EXISTS sessions (
 try { db.exec("ALTER TABLE posts ADD COLUMN tags TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE posts ADD COLUMN updated_at TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE posts ADD COLUMN pinned INTEGER DEFAULT 0"); } catch (e) {}
+// 用户体系升级（2026-10-05）：真实姓名 + 自定义昵称（7 天冷却）+ 昵称修改时间
+try { db.exec("ALTER TABLE users ADD COLUMN real_name TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN nickname TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN nickname_updated_at TEXT DEFAULT ''"); } catch (e) {}
 function hashPassword(password, salt) {
   return crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256').toString('hex');
 }
@@ -121,7 +125,7 @@ function createSession(username) {
 }
 function getSession(token) {
   if (!token) return null;
-  const row = db.prepare('SELECT s.username, u.is_admin, u.signature FROM sessions s JOIN users u ON u.username = s.username WHERE s.token = ?')
+  const row = db.prepare('SELECT s.username, u.is_admin, u.signature, u.real_name, u.nickname, u.nickname_updated_at FROM sessions s JOIN users u ON u.username = s.username WHERE s.token = ?')
     .get(token);
   return row || null;
 }
@@ -157,12 +161,28 @@ function readBody(req, cb) {
   });
 }
 function publicUser(row) {
-  return { username: row.username, is_admin: !!row.is_admin, signature: row.signature || '' };
+  return {
+    username: row.username,
+    is_admin: !!row.is_admin,
+    signature: row.signature || '',
+    real_name: row.real_name || '',
+    nickname: row.nickname || '',
+    nickname_updated_at: row.nickname_updated_at || '',
+    display_name: row.nickname || (row.username === 'admin' ? 'FBOJ' : row.username)
+  };
 }
+// 显示名：昵称 > FBOJ(admin) > 用户名
+function displayNameOf(username) {
+  if (username === 'admin') return 'FBOJ';
+  const r = db.prepare('SELECT nickname FROM users WHERE username = ?').get(username);
+  return (r && r.nickname) ? r.nickname : username;
+}
+const NICKNAME_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7 天
 function publicPost(row) {
   return {
     slug: row.slug, title: row.title, excerpt: row.excerpt,
-    date: row.date, author: row.author, zone: row.zone,
+    date: row.date, author: row.author, author_display: row.author === 'admin' ? 'FBOJ' : displayNameOf(row.author),
+    zone: row.zone,
     content: row.content,
     tags: (row.tags || '').split(',').map(s => s.trim()).filter(Boolean),
     updated_at: row.updated_at || row.date,
@@ -190,9 +210,15 @@ function getComments(postId) {
       fs.writeFileSync(path.join(__dirname, '.admin_pw.txt'), adminPw, { mode: 0o600 });
     }
     const salt = makeSalt();
-    db.prepare('INSERT INTO users (username, password_hash, salt, is_admin, signature) VALUES (?, ?, ?, 1, ?)')
-      .run('admin', hashPassword(adminPw, salt), salt, '管理员就是我自己 😎');
+    db.prepare('INSERT INTO users (username, password_hash, salt, is_admin, signature, real_name) VALUES (?, ?, ?, 1, ?, ?)')
+      .run('admin', hashPassword(adminPw, salt), salt, '管理员就是我自己 😎', 'admin');
     console.log('已创建管理员账号 admin（密码见 .admin_pw.txt）');
+  } else {
+    // 老库补真实姓名：admin 的 real_name 固定为 'admin'（登录时填写它）
+    const r = db.prepare('SELECT real_name FROM users WHERE username = ?').get('admin');
+    if (!r || !r.real_name) {
+      db.prepare("UPDATE users SET real_name = 'admin' WHERE username = 'admin'").run();
+    }
   }
   // 从旧 posts.json 迁移（无则跳过）
   if (fs.existsSync(POSTS_SEED)) {
@@ -225,16 +251,19 @@ const server = http.createServer((req, res) => {
     return readBody(req, (body) => {
       const username = String(body.username || '').trim();
       const password = String(body.password || '');
+      const realName = String(body.real_name || '').trim();
       if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) return sendJson(res, 400, { error: '用户名需 3-20 位字母数字下划线' });
+      if (!/^[\u4e00-\u9fa5A-Za-z]{1,20}$/.test(realName)) return sendJson(res, 400, { error: '请填写真实姓名（1-20 位汉字/字母）' });
+      if (realName.toLowerCase() === 'admin' || realName.toLowerCase() === 'fboj') return sendJson(res, 400, { error: '真实姓名不能是 FBOJ/admin' });
       if (password.length < 4) return sendJson(res, 400, { error: '密码至少 4 位' });
       const exists = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
       if (exists) return sendJson(res, 409, { error: '用户名已被注册' });
       const salt = makeSalt();
-      db.prepare('INSERT INTO users (username, password_hash, salt, is_admin, signature) VALUES (?, ?, ?, 0, ?)')
-        .run(username, hashPassword(password, salt), salt, '这个人很懒，什么都没写～');
+      db.prepare('INSERT INTO users (username, password_hash, salt, is_admin, signature, real_name) VALUES (?, ?, ?, 0, ?, ?)')
+        .run(username, hashPassword(password, salt), salt, '这个人很懒，什么都没写～', realName);
       const t = createSession(username);
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Set-Cookie': `session=${t}; Path=/; HttpOnly` });
-      res.end(JSON.stringify({ ok: true, user: { username, is_admin: false, signature: '这个人很懒，什么都没写～' } }));
+      res.end(JSON.stringify({ ok: true, user: publicUser(db.prepare('SELECT * FROM users WHERE username = ?').get(username)) }));
     });
   }
 
@@ -242,11 +271,13 @@ const server = http.createServer((req, res) => {
     return readBody(req, async (body) => {
       const username = String(body.username || '').trim();
       const password = String(body.password || '');
+      const realName = String(body.real_name || '').trim();
       // 登录限流：10 分钟内失败超 10 次则拦截
       if (loginThrottled(username)) return sendJson(res, 429, { error: '尝试次数过多，请 10 分钟后再试' });
       let user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-      // 本地账号密码验证
+      // 本地账号：密码 + 真实姓名双重校验（老用户没填 real_name 时不强制，登录后补填）
       if (user && user.password_hash === hashPassword(password, user.salt)) {
+        if (user.real_name && realName !== user.real_name) return sendJson(res, 401, { error: '真实姓名与注册时不一致' });
         loginReset(username);
         const t = createSession(username);
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Set-Cookie': `session=${t}; Path=/; HttpOnly` });
@@ -267,13 +298,13 @@ const server = http.createServer((req, res) => {
           const isAdmin = ojData.role === 'admin' ? 1 : 0;
           if (!user) {
             const salt = makeSalt();
-            db.prepare('INSERT INTO users (username, password_hash, salt, is_admin, signature) VALUES (?, ?, ?, ?, ?)')
-              .run(username, hashPassword(password, salt), salt, isAdmin, '来自 OJ 的 ' + username);
+            db.prepare('INSERT INTO users (username, password_hash, salt, is_admin, signature, real_name) VALUES (?, ?, ?, ?, ?, ?)')
+              .run(username, hashPassword(password, salt), salt, isAdmin, '来自 OJ 的 ' + username, realName || (isAdmin ? 'admin' : ''));
           } else {
-            // 同步最新密码与角色（用户可能在 OJ 改过密码）
+            // 同步最新密码与角色（用户可能在 OJ 改过密码）；real_name 为空才补填
             const salt = makeSalt();
-            db.prepare('UPDATE users SET password_hash = ?, salt = ?, is_admin = ? WHERE username = ?')
-              .run(hashPassword(password, salt), salt, isAdmin, username);
+            db.prepare('UPDATE users SET password_hash = ?, salt = ?, is_admin = ?, real_name = COALESCE(NULLIF(real_name, \'\'), ?) WHERE username = ?')
+              .run(hashPassword(password, salt), salt, isAdmin, realName || (isAdmin ? 'admin' : ''), username);
           }
           user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
           const t = createSession(username);
@@ -379,6 +410,27 @@ const server = http.createServer((req, res) => {
           .run(slug, title, excerpt, content, date, session.username, zone, tags, date);
       } catch (e) { if (String(e.message).includes('UNIQUE')) return sendJson(res, 409, { error: '文章标识重复，再试一次' }); throw e; }
       sendJson(res, 201, { ok: true, slug });
+    });
+  }
+
+  // ---- 修改昵称（7 天冷却一次，昵称唯一）----
+  if (req.method === 'POST' && pathname === '/api/nickname') {
+    if (!session) return sendJson(res, 401, { error: '请先登录' });
+    return readBody(req, (body) => {
+      const nick = String(body.nickname || '').trim();
+      if (!/^[\u4e00-\u9fa5A-Za-z0-9_-]{2,16}$/.test(nick)) return sendJson(res, 400, { error: '昵称需 2-16 位汉字/字母/数字/_/-' });
+      const dup = db.prepare('SELECT username FROM users WHERE nickname = ? AND username <> ?').get(nick, session.username);
+      if (dup) return sendJson(res, 409, { error: '这个昵称已被「' + displayNameOf(dup.username) + '」占用，换一个吧' });
+      const u = db.prepare('SELECT nickname_updated_at FROM users WHERE username = ?').get(session.username);
+      const last = u && u.nickname_updated_at ? new Date(u.nickname_updated_at).getTime() : 0;
+      const remain = last ? NICKNAME_COOLDOWN_MS - (Date.now() - last) : 0;
+      if (remain > 0) {
+        const days = Math.ceil(remain / (24 * 60 * 60 * 1000));
+        return sendJson(res, 429, { error: '昵称刚改过，还要等 ' + days + ' 天才能再改' });
+      }
+      db.prepare('UPDATE users SET nickname = ?, nickname_updated_at = ? WHERE username = ?')
+        .run(nick, new Date().toISOString(), session.username);
+      sendJson(res, 200, { ok: true, nickname: nick, display_name: nick, locked_until: new Date(Date.now() + NICKNAME_COOLDOWN_MS).toISOString() });
     });
   }
 

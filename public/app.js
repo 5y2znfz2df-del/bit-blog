@@ -132,7 +132,7 @@
       }
       var date = document.createElement('div');
       date.className = 'post-date';
-      date.textContent = (post.date || '') + ' · ' + (post.author || '匿名') +
+      date.textContent = (post.date || '') + ' · ' + (post.author_display || post.author || '匿名') +
         (post.updated_at && post.updated_at !== post.date ? ' · 更新 ' + post.updated_at : '');
       var p = document.createElement('p');
       p.textContent = post.excerpt || '';

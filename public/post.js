@@ -227,7 +227,7 @@
     }
     var date = document.createElement('div');
     date.className = 'post-date';
-    date.textContent = (p.date || '') + ' · 作者 ' + (p.author || '匿名') +
+    date.textContent = (p.date || '') + ' · 作者 ' + (p.author_display || p.author || '匿名') +
       (p.updated_at && p.updated_at !== p.date ? ' · 🔄 更新于 ' + p.updated_at : '') +
       (p.tags && p.tags.length ? ' · 🏷 ' + p.tags.map(function (t) { return '#' + t; }).join(' ') : '');
     var body = document.createElement('div');

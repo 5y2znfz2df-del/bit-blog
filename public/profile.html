@@ -31,6 +31,8 @@
             <span id="profile-username" class="profile-username"></span>
             <span id="profile-admin-badge" class="admin-badge hidden">管理员</span>
           </div>
+          <p id="profile-nickname" class="profile-nickname"></p>
+          <p id="profile-realname" class="muted" style="font-size:12px"></p>
           <p id="profile-signature" class="profile-signature"></p>
         </div>
 
@@ -42,12 +44,21 @@
           </div>
           <p id="sig-msg" class="status-msg"></p>
         </div>
+
+        <div class="signature-edit" style="margin-top:18px">
+          <label>自定义昵称（2-16 位，改一次锁 7 天）</label>
+          <div class="signature-row">
+            <input type="text" id="nick-input" maxlength="16" placeholder="给自己起个昵称…">
+            <button id="nick-save">保存昵称</button>
+          </div>
+          <p id="nick-msg" class="status-msg"></p>
+        </div>
       </div>
     </div>
   </main>
 
   <footer class="site-footer" style="margin-top:auto;">Powered by 多AI协作 🤖</footer>
 
-  <script src="profile.js?v=20261004a"></script>
+  <script src="profile.js?v=20261005a"></script>
 </body>
 </html>
