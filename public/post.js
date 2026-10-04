@@ -50,6 +50,17 @@
     navLogout.classList.toggle('hidden', !loggedIn);
     navProfile.classList.toggle('hidden', !loggedIn);
     navPublish.classList.toggle('hidden', !loggedIn);
+    // 2026-10-05 修复：/api/me 可能比文章慢返回，评论区登录态要跟着刷新
+    syncCommentAuth();
+  }
+
+  // 评论区登录态（表单 / 提示 切换）
+  function syncCommentAuth() {
+    var loggedIn = !!me;
+    var hasCommentBox = commentFormBox && commentLoginHint;
+    if (!hasCommentBox) return;
+    commentFormBox.classList.toggle('hidden', !loggedIn);
+    commentLoginHint.classList.toggle('hidden', loggedIn);
   }
   fetch('/api/me').then(function (r) { return r.json(); })
     .then(function (d) { if (d.user) applyAuth(d.user); })
@@ -277,13 +288,7 @@
     commentsSection.classList.remove('hidden');
     commentCount.textContent = (p.comments || []).length;
     renderComments(p.comments || []);
-    if (me) {
-      commentFormBox.classList.remove('hidden');
-      commentLoginHint.classList.add('hidden');
-    } else {
-      commentFormBox.classList.add('hidden');
-      commentLoginHint.classList.remove('hidden');
-    }
+    syncCommentAuth();  // 2026-10-05：文章渲染后再刷一次评论区登录态（防竞态）
   }
 
   function renderComments(comments) {
