@@ -448,3 +448,44 @@ body.dark .archive-item a { color: #cbd5e1; }
 body.dark .archive-item a:hover { color: #60a5fa; }
 body.dark .archive-year { color: #f1f5f9; border-bottom-color: #2a2e3a; }
 body.dark .post-content a { color: #60a5fa; }
+
+/* 置顶徽章 */
+.pin-badge {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  border-radius: 10px;
+  vertical-align: middle;
+}
+
+/* 上一篇 / 下一篇 */
+.post-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 26px 0 10px;
+  flex-wrap: wrap;
+}
+.post-nav-link {
+  display: inline-block;
+  max-width: 46%;
+  padding: 12px 18px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.05);
+  color: #4a6cf7;
+  text-decoration: none;
+  font-size: 14px;
+  transition: all .2s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.post-nav-link:hover { background: #f0f4ff; box-shadow: 0 4px 14px rgba(0,0,0,.09); }
+.post-nav-link.right { text-align: right; }
+body.dark .post-nav-link { background: #1a1d27; color: #93c5fd; }
+body.dark .post-nav-link:hover { background: #22263a; }

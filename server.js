@@ -78,7 +78,8 @@ CREATE TABLE IF NOT EXISTS posts (
   author TEXT NOT NULL,
   zone TEXT NOT NULL DEFAULT 'public',
   tags TEXT DEFAULT '',
-  updated_at TEXT DEFAULT ''
+  updated_at TEXT DEFAULT '',
+  pinned INTEGER DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS comments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,9 +101,10 @@ CREATE TABLE IF NOT EXISTS sessions (
 `);
 
 // ---------- 密码哈希 ----------
-// 老库补列（无 tags/updated_at 时加，避免重建丢数据）
+// 老库补列（无 tags/updated_at/pinned 时加，避免重建丢数据）
 try { db.exec("ALTER TABLE posts ADD COLUMN tags TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE posts ADD COLUMN updated_at TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE posts ADD COLUMN pinned INTEGER DEFAULT 0"); } catch (e) {}
 function hashPassword(password, salt) {
   return crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256').toString('hex');
 }
@@ -163,7 +165,8 @@ function publicPost(row) {
     date: row.date, author: row.author, zone: row.zone,
     content: row.content,
     tags: (row.tags || '').split(',').map(s => s.trim()).filter(Boolean),
-    updated_at: row.updated_at || row.date
+    updated_at: row.updated_at || row.date,
+    pinned: !!row.pinned
   };
 }
 function getLikes(postId) {
@@ -310,7 +313,7 @@ const server = http.createServer((req, res) => {
     const zone = url.searchParams.get('zone') === 'private' ? 'private' : 'public';
     const tag = (url.searchParams.get('tag') || '').trim();
     const q = (url.searchParams.get('q') || '').trim().toLowerCase();
-    let rows = db.prepare('SELECT * FROM posts WHERE zone = ? ORDER BY date DESC').all(zone);
+    let rows = db.prepare('SELECT * FROM posts WHERE zone = ? ORDER BY pinned DESC, date DESC, id DESC').all(zone);
     if (tag) rows = rows.filter(r => (r.tags || '').split(',').map(s => s.trim()).includes(tag));
     if (q) rows = rows.filter(r => (r.title || '').toLowerCase().includes(q) || (r.content || '').toLowerCase().includes(q) || (r.excerpt || '').toLowerCase().includes(q));
     const size = Math.min(Math.max(parseInt(url.searchParams.get('size') || '0', 10) || 0, 0), 100);

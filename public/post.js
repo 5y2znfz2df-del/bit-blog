@@ -24,6 +24,7 @@
 
   var params = new URLSearchParams(window.location.search);
   var slug = params.get('slug');
+  var zoneHint = (params.get('zone') === 'private' || document.referrer.indexOf('private.html') > -1) ? 'private' : '';
   var me = null;
   var post = null;
 
@@ -320,6 +321,34 @@
     .catch(function (err) {
       statusMsg.textContent = err.message === 'private' ? '这篇文章在私密区，仅管理员可见' : '文章不存在或加载失败';
     });
+
+  // ---- 上一篇 / 下一篇（按列表顺序找邻居）----
+  var postNav = document.getElementById('post-nav');
+  function renderNav(posts) {
+    if (!postNav || !posts.length) return;
+    var idx = -1;
+    for (var i = 0; i < posts.length; i++) {
+      if (posts[i].slug === slug) { idx = i; break; }
+    }
+    if (idx < 0) return;
+    var prev = posts[idx + 1]; // 列表是新的在前，所以「上一篇」（更早）在更大下标
+    var next = posts[idx - 1]; // 「下一篇」（更新）在更小下标
+    var html = '';
+    if (prev) html += '<a class="post-nav-link" href="/post.html?slug=' + encodeURIComponent(prev.slug) + '">← 上一篇：' + escapeHtml(prev.title) + '</a>';
+    if (next) html += '<a class="post-nav-link right" href="/post.html?slug=' + encodeURIComponent(next.slug) + '">下一篇：' + escapeHtml(next.title) + ' →</a>';
+    if (html) {
+      postNav.innerHTML = html;
+      postNav.classList.remove('hidden');
+    }
+  }
+  // 拉同区文章列表找邻居
+  fetch('/api/posts' + (zoneHint ? '?zone=' + zoneHint : ''))
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      var ps = Array.isArray(d) ? d : (d.posts || []);
+      renderNav(ps);
+    })
+    .catch(function () {});
 
   // ---- 点赞 ----
   likeBtn.addEventListener('click', function () {

@@ -118,6 +118,12 @@
       var h2 = document.createElement('h2');
       h2.textContent = post.title || '无标题';
       head.appendChild(h2);
+      if (post.pinned) {
+        var pinBadge = document.createElement('span');
+        pinBadge.className = 'pin-badge';
+        pinBadge.textContent = '📌 置顶';
+        head.appendChild(pinBadge);
+      }
       if (post.author && post.author === 'admin') {
         var badge = document.createElement('span');
         badge.className = 'admin-badge';
