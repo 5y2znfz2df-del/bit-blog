@@ -3,4 +3,4 @@ data/blog.db
 data/blog.db-*
 *.log
 node_modules/
-.DS_Store
+.DS_Store.admin_pw.txt

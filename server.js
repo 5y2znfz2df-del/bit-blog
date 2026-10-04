@@ -12,6 +12,28 @@ const POSTS_SEED = path.join(__dirname, 'data', 'posts.json');
 
 const db = new DatabaseSync(DB_FILE);
 
+// ---------- session 过期清理（30 天） ----------
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+function getSession(token) {
+  if (!token) return null;
+  const row = db.prepare('SELECT s.username, u.is_admin, u.signature, s.created_at FROM sessions s JOIN users u ON u.username = s.username WHERE s.token = ?')
+    .get(token);
+  if (!row) return null;
+  const created = row.created_at ? new Date(row.created_at).getTime() : 0;
+  if (created && Date.now() - created > SESSION_TTL_MS) {
+    destroySession(token);
+    return null;
+  }
+  return row;
+}
+// 启动时 + 每 6 小时清理过期 session，防表无限膨胀
+function purgeSessions() {
+  const cutoff = new Date(Date.now() - SESSION_TTL_MS).toISOString();
+  try { db.prepare('DELETE FROM sessions WHERE created_at < ?').run(cutoff); } catch (e) {}
+}
+purgeSessions();
+setInterval(purgeSessions, 6 * 60 * 60 * 1000).unref();
+
 // ---------- 登录限流（防暴力破解，内存滑动窗口） ----------
 const loginAttempts = new Map(); // username -> {count, resetAt}
 function loginThrottled(username) {
@@ -155,10 +177,19 @@ function getComments(postId) {
 (function seed() {
   const existing = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
   if (!existing) {
+    // 密码从私有文件 .admin_pw.txt 读取（首次启动生成随机密码，防明文入库/GitHub 泄露）
+    let adminPw = '';
+    try {
+      adminPw = fs.readFileSync(path.join(__dirname, '.admin_pw.txt'), 'utf8').trim();
+    } catch (e) {}
+    if (!adminPw) {
+      adminPw = crypto.randomBytes(9).toString('hex');
+      fs.writeFileSync(path.join(__dirname, '.admin_pw.txt'), adminPw, { mode: 0o600 });
+    }
     const salt = makeSalt();
     db.prepare('INSERT INTO users (username, password_hash, salt, is_admin, signature) VALUES (?, ?, ?, 1, ?)')
-      .run('admin', hashPassword('fx123456', salt), salt, '管理员就是我自己 😎');
-    console.log('已创建管理员账号 admin');
+      .run('admin', hashPassword(adminPw, salt), salt, '管理员就是我自己 😎');
+    console.log('已创建管理员账号 admin（密码见 .admin_pw.txt）');
   }
   // 从旧 posts.json 迁移（无则跳过）
   if (fs.existsSync(POSTS_SEED)) {
@@ -385,6 +416,47 @@ const server = http.createServer((req, res) => {
     });
   }
 
+  // ---- sitemap.xml（自动从文章库生成，供搜索引擎收录）----
+  if (req.method === 'GET' && pathname === '/sitemap.xml') {
+    const rows = db.prepare("SELECT slug, date FROM posts WHERE zone='public' ORDER BY date DESC").all();
+    const base = 'https://blog.bitoj.dpdns.org';
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+    xml += '<url><loc>' + base + '/</loc><priority>1.0</priority></url>';
+    xml += '<url><loc>' + base + '/archives.html</loc></url>';
+    rows.forEach(r => {
+      xml += '<url><loc>' + base + '/post.html?slug=' + encodeURIComponent(r.slug) +
+        '</loc><lastmod>' + (r.date || '') + '</lastmod><priority>0.8</priority></url>';
+    });
+    xml += '</urlset>';
+    res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'no-cache' });
+    return res.end(xml);
+  }
+
+  // ---- RSS 订阅源（RSS 2.0，供阅读器/订阅）----
+  if (req.method === 'GET' && pathname === '/rss.xml') {
+    const rows = db.prepare("SELECT * FROM posts WHERE zone='public' ORDER BY date DESC LIMIT 20").all();
+    const base = 'https://blog.bitoj.dpdns.org';
+    let rss = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    rss += '<rss version="2.0"><channel>';
+    rss += '<title>比特的小博客</title><link>' + base + '/</link>';
+    rss += '<description>比特的小博客 - C++ 学习与生活记录</description>';
+    rss += '<language>zh-cn</language>';
+    rows.forEach(r => {
+      const esc = s => String(s || '').replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+      const desc = esc(r.excerpt);
+      rss += '<item><title>' + esc(r.title) + '</title>';
+      rss += '<link>' + base + '/post.html?slug=' + encodeURIComponent(r.slug) + '</link>';
+      rss += '<guid>' + base + '/post.html?slug=' + encodeURIComponent(r.slug) + '</guid>';
+      rss += '<pubDate>' + (r.date || '') + '</pubDate>';
+      rss += '<description><![CDATA[' + (r.excerpt || '') + ']]></description>';
+      rss += '</item>';
+    });
+    rss += '</channel></rss>';
+    res.writeHead(200, { 'Content-Type': 'application/rss+xml; charset=utf-8', 'Cache-Control': 'no-cache' });
+    return res.end(rss);
+  }
+
   // ---- 静态文件 ----
   if (req.method !== 'GET') return sendJson(res, 405, { error: 'method not allowed' });
 
@@ -394,7 +466,13 @@ const server = http.createServer((req, res) => {
     '.js': 'text/javascript; charset=utf-8',
     '.ico': 'image/x-icon',
     '.txt': 'text/plain; charset=utf-8',
-    '.xml': 'text/xml; charset=utf-8'
+    '.xml': 'text/xml; charset=utf-8',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.svg': 'image/svg+xml'
   };
   const relativePath = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
   const filePath = path.resolve(PUBLIC_DIR, relativePath);
