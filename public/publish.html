@@ -36,7 +36,9 @@
         <label>内容</label>
         <textarea id="pub-content" rows="12" required></textarea>
         <label>标签（逗号分隔，可选）</label>
-        <input type="text" id="pub-tags" placeholder="C++, 算法, GESP">
+        <input type="text" id="pub-tags" list="tag-suggestions" placeholder="C++, 算法, GESP（输入时联想已有标签）">
+        <datalist id="tag-suggestions"></datalist>
+        <p class="status-msg" style="font-size:12px;margin-top:2px" id="tag-hint">💡 用已有标签更容易被找到，别造新词</p>
         <label>归属区域</label>
         <div id="pub-zone-wrap">
           <select id="pub-zone">
@@ -51,6 +53,6 @@
 
   <footer class="site-footer" style="margin-top:auto;">Powered by 多AI协作 🤖</footer>
 
-  <script src="publish.js?v=20261004a"></script>
+  <script src="publish.js?v=20261005a"></script>
 </body>
 </html>

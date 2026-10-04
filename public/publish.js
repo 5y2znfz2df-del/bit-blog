@@ -9,6 +9,26 @@
   var msg = document.getElementById('pub-msg');
   var submit = document.getElementById('pub-submit');
 
+  // ---- 标签联想：拉所有已有标签填进 datalist，提示用规范词 ----
+  (function () {
+    fetch('/api/posts?size=100')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var ps = Array.isArray(d) ? d : (d.posts || []);
+        var set = {};
+        ps.forEach(function (p) {
+          (p.tags || []).forEach(function (t) { if (t) set[t] = 1; });
+        });
+        var list = document.getElementById('tag-suggestions');
+        if (list) {
+          list.innerHTML = Object.keys(set).map(function (t) {
+            return '<option value="' + t.replace(/"/g, '&quot;') + '">';
+          }).join('');
+        }
+      })
+      .catch(function () {});
+  })();
+
   // 先确认登录，否则打回；私密区选项仅管理员可见
   fetch('/api/me').then(function (r) { return r.json(); })
     .then(function (d) {
