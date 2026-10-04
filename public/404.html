@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 - 比特的小博客</title>
+  <link rel="stylesheet" href="/style.css?v=20261004a">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="logo" href="/">比特的小博客</a>
+      <div class="nav-links">
+        <a href="/">主页</a>
+        <a href="/archives.html">归档</a>
+        <a href="/files.html">文件</a>
+        <a href="#" id="theme-toggle" title="切换主题">🌙</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container" style="text-align:center;padding-top:80px">
+    <div style="font-size:72px">🤖</div>
+    <h1 class="page-title">404 页面不存在</h1>
+    <p class="status-msg">这个页面被比特搬走了，或者从来不存在。回 <a href="/">首页</a> 逛逛吧。</p>
+  </main>
+
+  <footer class="site-footer" style="position:fixed;bottom:0;width:100%">Powered by 多AI协作 🤖</footer>
+
+  <script>
+    (function () {
+      var t = document.getElementById('theme-toggle');
+      function apply(x) { document.body.classList.toggle('dark', x === 'dark'); if (t) t.textContent = x === 'dark' ? '☀️' : '🌙'; }
+      apply(localStorage.getItem('blog-theme') || 'light');
+      if (t) t.addEventListener('click', function () {
+        var n = document.body.classList.contains('dark') ? 'light' : 'dark';
+        localStorage.setItem('blog-theme', n); apply(n);
+      });
+    })();
+  </script>
+</body>
+</html>

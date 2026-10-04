@@ -2,6 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const zlib = require('zlib');
 const { DatabaseSync } = require('node:sqlite');
 
 const PORT = 4000;
@@ -10,6 +11,30 @@ const DB_FILE = path.join(__dirname, 'data', 'blog.db');
 const POSTS_SEED = path.join(__dirname, 'data', 'posts.json');
 
 const db = new DatabaseSync(DB_FILE);
+
+// ---------- 登录限流（防暴力破解，内存滑动窗口） ----------
+const loginAttempts = new Map(); // username -> {count, resetAt}
+function loginThrottled(username) {
+  const now = Date.now();
+  const rec = loginAttempts.get(username);
+  if (!rec || now > rec.resetAt) {
+    loginAttempts.set(username, { count: 1, resetAt: now + 10 * 60 * 1000 });
+    return false;
+  }
+  rec.count++;
+  return rec.count > 10; // 10 分钟 10 次失败后限流
+}
+function loginReset(username) { loginAttempts.delete(username); }
+// 定期清理限流表防内存泄漏
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of loginAttempts) if (now > v.resetAt) loginAttempts.delete(k);
+}, 5 * 60 * 1000).unref();
+
+// ---------- gzip 压缩（文本资源，减轻穿透流量） ----------
+function gzipIfPossible(buf) {
+  try { return zlib.gzipSync(buf, { level: 6 }); } catch (e) { return null; }
+}
 
 // ---------- 建表 ----------
 db.exec(`
@@ -82,8 +107,23 @@ function destroySession(token) {
 
 // ---------- 工具 ----------
 function sendJson(res, statusCode, data) {
-  res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
-  res.end(JSON.stringify(data));
+  const body = JSON.stringify(data);
+  const headers = {
+    'Content-Type': 'application/json; charset=utf-8',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'Referrer-Policy': 'same-origin'
+  };
+  const gz = gzipIfPossible(body);
+  if (gz) {
+    headers['Content-Encoding'] = 'gzip';
+    headers['Content-Length'] = Buffer.byteLength(gz);
+    res.writeHead(statusCode, headers);
+    return res.end(gz);
+  }
+  headers['Content-Length'] = Buffer.byteLength(body);
+  res.writeHead(statusCode, headers);
+  res.end(body);
 }
 function readBody(req, cb) {
   let body = '';
@@ -168,9 +208,12 @@ const server = http.createServer((req, res) => {
     return readBody(req, async (body) => {
       const username = String(body.username || '').trim();
       const password = String(body.password || '');
+      // 登录限流：10 分钟内失败超 10 次则拦截
+      if (loginThrottled(username)) return sendJson(res, 429, { error: '尝试次数过多，请 10 分钟后再试' });
       let user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
       // 本地账号密码验证
       if (user && user.password_hash === hashPassword(password, user.salt)) {
+        loginReset(username);
         const t = createSession(username);
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Set-Cookie': `session=${t}; Path=/; HttpOnly` });
         return res.end(JSON.stringify({ ok: true, user: publicUser(user) }));
@@ -186,6 +229,7 @@ const server = http.createServer((req, res) => {
         });
         const ojData = await ojRes.json();
         if (ojData.ok) {
+          loginReset(username);
           const isAdmin = ojData.role === 'admin' ? 1 : 0;
           if (!user) {
             const salt = makeSalt();
@@ -355,11 +399,34 @@ const server = http.createServer((req, res) => {
   const relativePath = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
   const filePath = path.resolve(PUBLIC_DIR, relativePath);
   if (!filePath.startsWith(PUBLIC_DIR + path.sep) || !contentTypes[path.extname(filePath).toLowerCase()]) {
-    return sendJson(res, 404, { error: 'not found' });
+    // 自定义 404 页
+    const notFound = path.join(PUBLIC_DIR, '404.html');
+    fs.readFile(notFound, (err, html) => {
+      if (err) return sendJson(res, 404, { error: 'not found' });
+      res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    });
+    return;
   }
   fs.readFile(filePath, (error, content) => {
     if (error) return sendJson(res, error.code === 'ENOENT' ? 404 : 500, { error: error.code === 'ENOENT' ? 'not found' : 'server error' });
-    res.writeHead(200, { 'Content-Type': contentTypes[path.extname(filePath).toLowerCase()] });
+    // 静态资源缓存策略：css/js 带版本号可强缓存 7 天；html 不缓存（防旧页）
+    const ext = path.extname(filePath).toLowerCase();
+    const headers = { 'Content-Type': contentTypes[ext] };
+    if (ext === '.css' || ext === '.js') headers['Cache-Control'] = 'public, max-age=604800';
+    else headers['Cache-Control'] = 'no-cache';
+    // 文本资源 gzip
+    if (ext === '.html' || ext === '.css' || ext === '.js' || ext === '.txt' || ext === '.xml') {
+      const gz = gzipIfPossible(content);
+      if (gz) {
+        headers['Content-Encoding'] = 'gzip';
+        headers['Content-Length'] = Buffer.byteLength(gz);
+        res.writeHead(200, headers);
+        return res.end(gz);
+      }
+    }
+    headers['Content-Length'] = content.length;
+    res.writeHead(200, headers);
     res.end(content);
   });
 });
