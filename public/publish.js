@@ -36,7 +36,8 @@
         title: t,
         excerpt: excerpt.value.trim(),
         content: c,
-        zone: zone.value
+        zone: zone.value,
+        tags: (document.getElementById('pub-tags') ? document.getElementById('pub-tags').value : '')
       })
     })
       .then(function (res) { return res.json().then(function (d) { return { ok: res.ok, d: d }; }); })

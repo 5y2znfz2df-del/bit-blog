@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /files.html
+Disallow: /api/ojfiles
+Disallow: /api/ojfile/
+Disallow: /login.html
+Disallow: /register
+
+Sitemap: https://blog.bitoj.dpdns.org/sitemap.xml

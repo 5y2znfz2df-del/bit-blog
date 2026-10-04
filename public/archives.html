@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>私密区 - 比特的小博客</title>
+  <title>归档 - 比特的小博客</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,9 +12,9 @@
       <a class="logo" href="/">比特的小博客</a>
       <div class="nav-links">
         <a href="/">主页</a>
-        <a href="/archives.html">归档</a>
+        <a href="/archives.html" class="active">归档</a>
         <a href="/files.html">文件</a>
-        <a href="private.html" class="active">私密区</a>
+        <a href="#" id="nav-private" class="hidden">私密区</a>
         <a href="#" id="nav-publish" class="hidden">发布</a>
         <a href="#" id="nav-profile" class="hidden">我的主页</a>
         <a href="/login.html" id="nav-login">登录</a>
@@ -25,13 +25,13 @@
   </header>
 
   <main class="container">
-    <h1 class="page-title">🔒 私密区 <span class="private-hint">登录用户可看 · 仅管理员可发布</span></h1>
-    <ul id="post-list" class="post-list"></ul>
-    <p id="status-msg" class="status-msg"></p>
+    <div class="breadcrumb"><a href="/">首页</a> › <span>归档</span></div>
+    <h1 class="page-title">📚 文章归档</h1>
+    <div id="archive-box"><p class="status-msg">加载中…</p></div>
   </main>
 
   <footer class="site-footer">Powered by 多AI协作 🤖</footer>
 
-  <script src="private.js"></script>
+  <script src="archives.js"></script>
 </body>
 </html>

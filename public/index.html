@@ -12,21 +12,27 @@
       <a class="logo" href="/">比特的小博客</a>
       <div class="nav-links">
         <a href="/" class="active">主页</a>
+        <a href="/archives.html">归档</a>
+        <a href="/files.html">文件</a>
         <a href="#" id="nav-private" class="hidden">私密区</a>
         <a href="#" id="nav-publish" class="hidden">发布</a>
         <a href="#" id="nav-profile" class="hidden">我的主页</a>
         <a href="/login.html" id="nav-login">登录</a>
         <a href="#" id="nav-logout" class="hidden">退出</a>
+        <a href="#" id="theme-toggle" title="切换主题">🌙</a>
       </div>
     </nav>
   </header>
 
   <main class="container">
+    <div class="breadcrumb"><a href="/">首页</a> › <span>最新文章</span></div>
     <div class="search-bar">
-      <input type="text" id="search-input" placeholder="搜索文章标题或摘要…" autocomplete="off">
+      <input type="text" id="search-input" placeholder="🔍 全文搜索文章标题 / 内容 / 标签…" autocomplete="off">
     </div>
+    <div id="tag-cloud" class="tag-cloud"></div>
     <h1 class="page-title">最新文章</h1>
     <ul id="post-list" class="post-list"></ul>
+    <div id="pager" class="pager"></div>
     <p id="status-msg" class="status-msg"></p>
   </main>
 

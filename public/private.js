@@ -7,6 +7,20 @@
   var navLogout = document.getElementById('nav-logout');
   var navPublish = document.getElementById('nav-publish');
   var navProfile = document.getElementById('nav-profile');
+  var themeToggle = document.getElementById('theme-toggle');
+
+  function applyTheme(t) {
+    document.body.classList.toggle('dark', t === 'dark');
+    if (themeToggle) themeToggle.textContent = t === 'dark' ? '☀️' : '🌙';
+  }
+  if (themeToggle) {
+    applyTheme(localStorage.getItem('blog-theme') || 'light');
+    themeToggle.addEventListener('click', function () {
+      var next = document.body.classList.contains('dark') ? 'light' : 'dark';
+      localStorage.setItem('blog-theme', next);
+      applyTheme(next);
+    });
+  }
 
   function render(posts) {
     list.innerHTML = '';

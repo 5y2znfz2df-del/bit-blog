@@ -29,7 +29,9 @@ CREATE TABLE IF NOT EXISTS posts (
   content TEXT NOT NULL,
   date TEXT NOT NULL,
   author TEXT NOT NULL,
-  zone TEXT NOT NULL DEFAULT 'public'
+  zone TEXT NOT NULL DEFAULT 'public',
+  tags TEXT DEFAULT '',
+  updated_at TEXT DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS comments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,6 +53,9 @@ CREATE TABLE IF NOT EXISTS sessions (
 `);
 
 // ---------- 密码哈希 ----------
+// 老库补列（无 tags/updated_at 时加，避免重建丢数据）
+try { db.exec("ALTER TABLE posts ADD COLUMN tags TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE posts ADD COLUMN updated_at TEXT DEFAULT ''"); } catch (e) {}
 function hashPassword(password, salt) {
   return crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256').toString('hex');
 }
@@ -94,7 +99,9 @@ function publicPost(row) {
   return {
     slug: row.slug, title: row.title, excerpt: row.excerpt,
     date: row.date, author: row.author, zone: row.zone,
-    content: row.content
+    content: row.content,
+    tags: (row.tags || '').split(',').map(s => s.trim()).filter(Boolean),
+    updated_at: row.updated_at || row.date
   };
 }
 function getLikes(postId) {
@@ -223,12 +230,50 @@ const server = http.createServer((req, res) => {
     // fallthrough
   }
 
-  // ---- 文章 ----
+  // ---- 文章列表（支持 ?tag= 过滤、?q= 搜索、分页 ?page=&size=）----
   if (req.method === 'GET' && pathname === '/api/posts') {
-    // zone=private 私密区；默认知识区（public）。两个区所有人都可读。
     const zone = url.searchParams.get('zone') === 'private' ? 'private' : 'public';
-    const rows = db.prepare('SELECT * FROM posts WHERE zone = ? ORDER BY date DESC').all(zone);
-    return sendJson(res, 200, rows.map(r => ({ ...publicPost(r), likes: getLikes(r.id), comment_count: getComments(r.id).length })));
+    const tag = (url.searchParams.get('tag') || '').trim();
+    const q = (url.searchParams.get('q') || '').trim().toLowerCase();
+    let rows = db.prepare('SELECT * FROM posts WHERE zone = ? ORDER BY date DESC').all(zone);
+    if (tag) rows = rows.filter(r => (r.tags || '').split(',').map(s => s.trim()).includes(tag));
+    if (q) rows = rows.filter(r => (r.title || '').toLowerCase().includes(q) || (r.content || '').toLowerCase().includes(q) || (r.excerpt || '').toLowerCase().includes(q));
+    const size = Math.min(Math.max(parseInt(url.searchParams.get('size') || '0', 10) || 0, 0), 100);
+    const page = Math.max(parseInt(url.searchParams.get('page') || '1', 10) || 1, 1);
+    const paged = size > 0 ? rows.slice((page - 1) * size, page * size) : rows;
+    return sendJson(res, 200, {
+      posts: paged.map(r => ({ ...publicPost(r), likes: getLikes(r.id), comment_count: getComments(r.id).length })),
+      total: rows.length,
+      page, size,
+      tags: [...new Set(rows.flatMap(r => (r.tags || '').split(',').map(s => s.trim()).filter(Boolean)))].sort()
+    });
+  }
+
+  // ---- OJ 网盘文件列表代理（博客“文件页”数据源，只读转发）----
+  if (req.method === 'GET' && pathname === '/api/ojfiles') {
+    fetch('http://127.0.0.1:8080/api/files', { signal: AbortSignal.timeout(6000) })
+      .then(r => r.json())
+      .then(d => sendJson(res, 200, d))
+      .catch(() => sendJson(res, 502, { error: 'OJ 网盘暂不可达' }));
+    return;
+  }
+
+  // ---- OJ 网盘文件下载代理（博客文件页走这里，避免直连 8080）----
+  if (req.method === 'GET' && pathname.startsWith('/api/ojfile/') && pathname.endsWith('/download')) {
+    const fid = pathname.slice('/api/ojfile/'.length, -'/download'.length);
+    fetch('http://127.0.0.1:8080/api/files/' + fid + '/download', { signal: AbortSignal.timeout(15000) })
+      .then(r => {
+        if (!r.ok) return sendJson(res, 502, { error: '文件暂不可达' });
+        const disp = r.headers.get('content-disposition') || '';
+        res.writeHead(200, {
+          'Content-Type': r.headers.get('content-type') || 'application/octet-stream',
+          'Content-Length': r.headers.get('content-length') || '',
+          'Content-Disposition': disp
+        });
+        return r.body.pipe(res);
+      })
+      .catch(() => sendJson(res, 502, { error: '文件暂不可达' }));
+    return;
   }
 
   if (req.method === 'GET' && pathname.startsWith('/api/posts/')) {
@@ -250,9 +295,10 @@ const server = http.createServer((req, res) => {
       const slug = body.slug || title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '') + '-' + Date.now().toString(36);
       const excerpt = String(body.excerpt || '').trim() || content.slice(0, 60);
       const date = new Date().toISOString().slice(0, 10);
+      const tags = String(body.tags || '').split(/[,，]/).map(s => s.trim()).filter(Boolean).slice(0, 10).join(',');
       try {
-        db.prepare('INSERT INTO posts (slug, title, excerpt, content, date, author, zone) VALUES (?, ?, ?, ?, ?, ?, ?)')
-          .run(slug, title, excerpt, content, date, session.username, zone);
+        db.prepare('INSERT INTO posts (slug, title, excerpt, content, date, author, zone, tags, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+          .run(slug, title, excerpt, content, date, session.username, zone, tags, date);
       } catch (e) { if (String(e.message).includes('UNIQUE')) return sendJson(res, 409, { error: '文章标识重复，再试一次' }); throw e; }
       sendJson(res, 201, { ok: true, slug });
     });
@@ -302,7 +348,9 @@ const server = http.createServer((req, res) => {
     '.html': 'text/html; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
     '.js': 'text/javascript; charset=utf-8',
-    '.ico': 'image/x-icon'
+    '.ico': 'image/x-icon',
+    '.txt': 'text/plain; charset=utf-8',
+    '.xml': 'text/xml; charset=utf-8'
   };
   const relativePath = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
   const filePath = path.resolve(PUBLIC_DIR, relativePath);
